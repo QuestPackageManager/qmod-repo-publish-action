@@ -44346,7 +44346,7 @@ async function run() {
         // }
         core.info('Encoding modified Mods json');
         const modManifest = (0, github_1.ConstructModEntry)(octokit, modJson, qmodUrl);
-        core.debug(JSON.stringify(modManifest, null, 2));
+        core.info(JSON.stringify(modManifest, null, 2));
         // convert to base64
         const encodedModManifest = Buffer.from(JSON.stringify(modManifest, null, 2)).toString('base64');
         core.info('Commiting modified Mods json');
