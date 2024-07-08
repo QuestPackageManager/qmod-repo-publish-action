@@ -86,13 +86,46 @@ export async function run(): Promise<void> {
     core.info('Commiting modified Mods json')
 
     const fileName = `${modJson.id}-${modJson.version}.json`
+    const filePath = path.join(
+      'mods',
+      modJson.packageVersion ?? 'global',
+      fileName
+    )
+
+    let existingFileSha: string | undefined
+
+    try {
+      // Try to get the file content to retrieve the SHA
+      const { data: existingFile } = await octokit.rest.repos.getContent({
+        owner: forkedModRepo.owner.login,
+        repo: forkedModRepo.name,
+        path: filePath,
+        ref: `refs/heads/${newBranch}`
+      })
+
+      // force unwrap
+      if (
+        !existingFile ||
+        typeof existingFile !== 'object' ||
+        Array.isArray(existingFile) ||
+        existingFile.type !== 'file'
+      ) {
+        throw new Error(`${filePath} is not a file at fork`)
+      }
+
+      existingFileSha = existingFile.sha
+    } catch (e) {
+      // ignore
+    }
+
     await octokit.rest.repos.createOrUpdateFileContents({
       owner: forkedModRepo.owner.login,
       repo: forkedModRepo.name,
-      path: path.join('mods', modJson.packageVersion ?? 'global', fileName),
+      path: filePath,
       message: `Added ${modJson.name} v${modJson.version} to the Mod Repo`,
       content: encodedModManifest,
-      branch: `refs/heads/${newBranch}`
+      branch: `refs/heads/${newBranch}`,
+      sha: existingFileSha
     })
 
     // make PR
