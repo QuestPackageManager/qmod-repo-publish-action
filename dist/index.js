@@ -44347,7 +44347,7 @@ async function run() {
         core.info('Encoding modified Mods json');
         const modManifest = (0, github_1.ConstructModEntry)(octokit, modJson, qmodUrl);
         // convert to base64
-        const encodedModManifest = btoa(JSON.stringify(modManifest, null, 2));
+        const encodedModManifest = Buffer.from(JSON.stringify(modManifest, null, 2)).toString('base64');
         core.info('Commiting modified Mods json');
         const fileName = `${modJson.id}-${modJson.version}.json`;
         await octokit.rest.repos.createOrUpdateFileContents({
