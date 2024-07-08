@@ -44155,12 +44155,10 @@ const github = __importStar(__nccwpck_require__(5438));
 async function getFork(octokit, repoOwner, repoName) {
     core.info('Getting Fork of Mod Repo');
     try {
-        const forkedModRepo = (await octokit.rest.repos
-            .get({
+        const forkedModRepo = (await octokit.rest.repos.get({
             owner: github.context.repo.owner,
             repo: repoName
-        })
-            .then(x => x.data));
+        })).data;
         return forkedModRepo;
     }
     catch {
@@ -44181,7 +44179,7 @@ async function getFork(octokit, repoOwner, repoName) {
             repo: modRepo.name
         })).data;
         if (!forkedModRepo.fork) {
-            throw `${forkedModRepo.html_url} is not a fork of https://github.com/${repoName}/${repoOwner}`;
+            throw new Error(`${forkedModRepo.html_url} is not a fork of https://github.com/${repoName}/${repoOwner}`);
         }
         return forkedModRepo;
     }
@@ -44207,7 +44205,7 @@ async function CreateBranchIfRequired(octokit, forkedRepo, newBranch) {
             owner: forkedRepo.owner.login,
             repo: forkedRepo.name,
             ref: `refs/heads/${newBranch}`,
-            sha: sha
+            sha
         });
     }
     // This will only run if the branch already existed, as there's a return in the catch statement
@@ -44238,7 +44236,7 @@ async function FetchUpstream(octokit, repo, upstreamRepo, branch, upstreamBranch
             });
         }
         catch (error) {
-            throw `Failed to fetch upstream. This can be fixed by performing a manual merge\nError: ${error}`;
+            throw new Error(`Failed to fetch upstream. This can be fixed by performing a manual merge\nError: ${error}`);
         }
     }
     else {
@@ -44257,7 +44255,7 @@ async function ConstructModEntry(octokit, modJson, downloadUrl) {
         version: modJson.version,
         downloadLink: downloadUrl,
         source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
-        authorIcon: authorIcon,
+        authorIcon,
         author: modJson.author,
         cover: modJson.coverImage
     };

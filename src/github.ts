@@ -9,6 +9,18 @@ export type GithubRepo = Awaited<
 
 export type GithubRepoLite = GithubRepo & NonNullable<GithubRepo['parent']>
 
+export interface ModEntry {
+  name: string
+  description: string | undefined
+  id: string
+  version: string
+  downloadLink: string
+  source: string
+  authorIcon: string
+  author: string
+  cover: string | undefined
+}
+
 export async function getFork(
   octokit: InstanceType<typeof GitHub>,
   repoOwner: string,
@@ -17,12 +29,12 @@ export async function getFork(
   core.info('Getting Fork of Mod Repo')
 
   try {
-    const forkedModRepo = (await octokit.rest.repos
-      .get({
+    const forkedModRepo = (
+      await octokit.rest.repos.get({
         owner: github.context.repo.owner,
         repo: repoName
       })
-      .then(x => x.data)) as GithubRepoLite
+    ).data as GithubRepoLite
 
     return forkedModRepo
   } catch {
@@ -53,7 +65,9 @@ export async function getFork(
     ).data
 
     if (!forkedModRepo.fork) {
-      throw `${forkedModRepo.html_url} is not a fork of https://github.com/${repoName}/${repoOwner}`
+      throw new Error(
+        `${forkedModRepo.html_url} is not a fork of https://github.com/${repoName}/${repoOwner}`
+      )
     }
 
     return forkedModRepo as GithubRepoLite
@@ -64,7 +78,7 @@ export async function CreateBranchIfRequired(
   octokit: InstanceType<typeof GitHub>,
   forkedRepo: GithubRepoLite,
   newBranch: string
-) {
+): Promise<void> {
   core.info(`Checking if "${newBranch}" branch exists`)
   try {
     await octokit.rest.git.getRef({
@@ -89,7 +103,7 @@ export async function CreateBranchIfRequired(
       owner: forkedRepo.owner.login,
       repo: forkedRepo.name,
       ref: `refs/heads/${newBranch}`,
-      sha: sha
+      sha
     })
   }
 
@@ -109,7 +123,7 @@ export async function FetchUpstream(
   upstreamRepo: GithubRepoLite,
   branch: string,
   upstreamBranch: string
-) {
+): Promise<void> {
   core.info(
     `Checking if ${repo.owner.login}:${branch} is behind ${upstreamRepo.owner.login}:${upstreamBranch}`
   )
@@ -145,7 +159,9 @@ export async function FetchUpstream(
         force: true
       })
     } catch (error) {
-      throw `Failed to fetch upstream. This can be fixed by performing a manual merge\nError: ${error}`
+      throw new Error(
+        `Failed to fetch upstream. This can be fixed by performing a manual merge\nError: ${error}`
+      )
     }
   } else {
     core.info(`${repo.owner.login}:${branch} is up-to-date`)
@@ -156,7 +172,7 @@ export async function ConstructModEntry(
   octokit: InstanceType<typeof GitHub>,
   modJson: ModJSON,
   downloadUrl: string
-) {
+): Promise<ModEntry> {
   const currentUser = (
     await octokit.rest.users.getByUsername({
       username: github.context.repo.owner
@@ -165,14 +181,14 @@ export async function ConstructModEntry(
 
   const authorIcon = currentUser.avatar_url
 
-  const modEntry = {
+  const modEntry: ModEntry = {
     name: modJson.name,
     description: modJson.description,
     id: modJson.id,
     version: modJson.version,
     downloadLink: downloadUrl,
     source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
-    authorIcon: authorIcon,
+    authorIcon,
     author: modJson.author,
     cover: modJson.coverImage
   }
