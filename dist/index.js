@@ -44382,14 +44382,16 @@ async function run() {
             branch: `refs/heads/${newBranch}`,
             sha: existingFileSha
         });
+        core.info('Made commit, creating PR now');
         // make PR
         const { data: pullRequest } = await octokit.rest.pulls.create({
             owner: modRepo.owner.login,
             repo: modRepo.name,
+            base: modRepo.default_branch,
             title: `${modJson.id} ${modJson.version} - ${modJson.packageId} ${modJson.packageVersion}`,
             body: 'Automatically generated pull request',
-            base: forkedModRepo.default_branch,
             head: `${forkedModRepo.owner.login}:${newBranch}`,
+            head_repo: `${modRepo.owner.login}/${modRepo.name}`,
             maintainer_can_modify: true
         });
         core.info(`Made PR at ${pullRequest.html_url}`);
