@@ -19,11 +19,11 @@ inputs:
     default: ''
   qmod_repo_owner:
     description: 'Repo owner for beatmods 3'
-    required: true
+    required: false
     default: 'QuestPackageManager'
   qmod_repo_name:
     description: 'Repo  3'
-    required: true
+    required: false
     default: 'beatmods3'
 
 # Define your outputs here.
