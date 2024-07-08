@@ -44353,7 +44353,7 @@ async function run() {
         await octokit.rest.repos.createOrUpdateFileContents({
             owner: forkedModRepo.owner.login,
             repo: forkedModRepo.name,
-            path: path_1.default.join('/', 'mods', modJson.packageVersion ?? 'global', fileName),
+            path: path_1.default.join('mods', modJson.packageVersion ?? 'global', fileName),
             message: `Added ${modJson.name} v${modJson.version} to the Mod Repo`,
             content: encodedModManifest,
             branch: `refs/heads/${newBranch}`
