@@ -40,8 +40,10 @@ export async function run(): Promise<void> {
     // const octokit = github.getOctokit(myToken, {userAgent: "MyActionVersion1"});
     const octokit = github.getOctokit(myToken)
 
+    core.info(`Downloading qmod from ${qmodUrl}`)
     const qmod = await fetch(qmodUrl)
-    const qmodZip = await JSZip.loadAsync(await qmod.blob())
+    core.info(`Successfully got qmod`)
+    const qmodZip = await JSZip.loadAsync(await qmod.arrayBuffer())
 
     const modJsonFile = qmodZip.file('mod.json')
 

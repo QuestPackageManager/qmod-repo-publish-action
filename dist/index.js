@@ -44316,8 +44316,10 @@ async function run() {
         // You can also pass in additional options as a second parameter to getOctokit
         // const octokit = github.getOctokit(myToken, {userAgent: "MyActionVersion1"});
         const octokit = github.getOctokit(myToken);
+        core.info(`Downloading qmod from ${qmodUrl}`);
         const qmod = await fetch(qmodUrl);
-        const qmodZip = await jszip_1.default.loadAsync(await qmod.blob());
+        core.info(`Successfully got qmod`);
+        const qmodZip = await jszip_1.default.loadAsync(await qmod.arrayBuffer());
         const modJsonFile = qmodZip.file('mod.json');
         if (modJsonFile == null) {
             core.error(`mod.json not found in zip ${qmodUrl}`);
