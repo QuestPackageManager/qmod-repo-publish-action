@@ -1,12 +1,21 @@
 # QMod Repo Publishing
 Automatically create a mod entry manifest and PR to a qmod repo
 
+# Create PAT Token (Required)
+
+First, make a token for use with this workflow with the following scopes:
+- Administration (read/write)
+- Contents (read/write)
+- Pull requests (read/write)
+
+<!-- 
+TODO: Wait for this to be allowed
 Add permissions for fork: (Required)
 ```yaml
 permissions:
   pull-requests: write
   contents: write
-```
+``` -->
 
 Example Usage
 ```yaml
