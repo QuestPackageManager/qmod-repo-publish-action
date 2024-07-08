@@ -17,12 +17,12 @@ export async function getFork(
   core.info('Getting Fork of Mod Repo')
 
   try {
-    const forkedModRepo = await octokit.rest.repos
+    const forkedModRepo = (await octokit.rest.repos
       .get({
         owner: github.context.repo.owner,
         repo: repoName
       })
-      .then(x => x.data) as GithubRepoLite
+      .then(x => x.data)) as GithubRepoLite
 
     return forkedModRepo
   } catch {

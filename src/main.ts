@@ -56,7 +56,6 @@ export async function run(): Promise<void> {
 
     const newBranch = `${modJson.id}-${modJson.version}-${modJson.packageVersion}`
 
-  
     await FetchUpstream(
       octokit,
       forkedModRepo,
@@ -92,15 +91,14 @@ export async function run(): Promise<void> {
     const { data: pullRequest } = await octokit.rest.pulls.create({
       owner: modRepo.owner.login,
       repo: modRepo.name,
-      
+
       title: `${modJson.id} ${modJson.version} - ${modJson.packageId} ${modJson.packageVersion}`,
       body: 'Automatically generated pull request',
-      
+
       base: forkedModRepo.default_branch,
       head: `${forkedModRepo.owner.login}:${newBranch}`,
-      maintainer_can_modify: true,
+      maintainer_can_modify: true
     })
-
 
     core.info(`Made PR at ${pullRequest.html_url}`)
   } catch (error) {
