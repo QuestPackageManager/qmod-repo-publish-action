@@ -86,7 +86,6 @@ export async function run(): Promise<void> {
       owner: forkedModRepo.owner.login,
       repo: forkedModRepo.name,
       path: path.join(
-        '/',
         'mods',
         modJson.packageVersion ?? 'global',
         fileName
