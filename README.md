@@ -17,7 +17,7 @@ permissions:
   contents: write
 ``` -->
 
-Example Usage
+# Example Usage
 ```yaml
 # Upload QMod
 - name: Upload to Release
