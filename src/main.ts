@@ -76,7 +76,7 @@ export async function run(): Promise<void> {
     core.info('Encoding modified Mods json')
 
     const modManifest = ConstructModEntry(octokit, modJson, qmodUrl)
-    core.debug(JSON.stringify(modManifest, null, 2))
+    core.info(JSON.stringify(modManifest, null, 2))
 
     // convert to base64
     const encodedModManifest = Buffer.from(
