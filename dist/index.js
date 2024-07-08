@@ -44193,13 +44193,16 @@ async function CreateBranchIfRequired(octokit, forkedRepo, newBranch) {
             ref: `heads/${newBranch}`
         });
         core.info('Branch already exists');
+        // This will only run if the branch already existed, as there's a return in the catch statement
+        await FetchUpstream(octokit, forkedRepo, forkedRepo, newBranch, forkedRepo.default_branch);
     }
     catch {
         core.info('Branch does not exists, creating it now');
+        const upstream = forkedRepo.parent;
         const sha = (await octokit.rest.git.getRef({
-            owner: forkedRepo.owner.login,
-            repo: forkedRepo.name,
-            ref: `heads/${forkedRepo.default_branch}`
+            owner: upstream.owner.login,
+            repo: upstream.name,
+            ref: `heads/${upstream.default_branch}`
         })).data.object.sha;
         await octokit.rest.git.createRef({
             owner: forkedRepo.owner.login,
@@ -44208,8 +44211,6 @@ async function CreateBranchIfRequired(octokit, forkedRepo, newBranch) {
             sha
         });
     }
-    // This will only run if the branch already existed, as there's a return in the catch statement
-    await FetchUpstream(octokit, forkedRepo, forkedRepo, newBranch, forkedRepo.default_branch);
 }
 async function FetchUpstream(octokit, repo, upstreamRepo, branch, upstreamBranch) {
     core.info(`Checking if ${repo.owner.login}:${branch} is behind ${upstreamRepo.owner.login}:${upstreamBranch}`);
@@ -44329,7 +44330,14 @@ async function run() {
         const forkedModRepo = await (0, github_1.getFork)(octokit, qmodRepoOwner, qmodRepoName);
         const modRepo = forkedModRepo.parent;
         const newBranch = `${modJson.id}-${modJson.version}-${modJson.packageVersion}`;
-        await (0, github_1.FetchUpstream)(octokit, forkedModRepo, modRepo, forkedModRepo.default_branch, modRepo.default_branch);
+        core.info('Fork made, fetching upstream');
+        // await FetchUpstream(
+        //   octokit,
+        //   forkedModRepo,
+        //   modRepo,
+        //   forkedModRepo.default_branch,
+        //   modRepo.default_branch
+        // )
         await (0, github_1.CreateBranchIfRequired)(octokit, forkedModRepo, newBranch);
         // core.info('Cloning fork')
         // const result = await exec.exec(`git clone ${forkedModRepo.html_url}`)

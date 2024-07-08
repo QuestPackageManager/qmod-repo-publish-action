@@ -4,7 +4,6 @@ import JSZip from 'jszip'
 import {
   ConstructModEntry,
   CreateBranchIfRequired,
-  FetchUpstream,
   getFork,
   GithubRepoLite
 } from './github'
@@ -58,13 +57,14 @@ export async function run(): Promise<void> {
 
     const newBranch = `${modJson.id}-${modJson.version}-${modJson.packageVersion}`
 
-    await FetchUpstream(
-      octokit,
-      forkedModRepo,
-      modRepo,
-      forkedModRepo.default_branch,
-      modRepo.default_branch
-    )
+    core.info('Fork made, fetching upstream')
+    // await FetchUpstream(
+    //   octokit,
+    //   forkedModRepo,
+    //   modRepo,
+    //   forkedModRepo.default_branch,
+    //   modRepo.default_branch
+    // )
     await CreateBranchIfRequired(octokit, forkedModRepo, newBranch)
 
     // core.info('Cloning fork')
