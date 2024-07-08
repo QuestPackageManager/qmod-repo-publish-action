@@ -44345,7 +44345,7 @@ async function run() {
         //   throw `Git clone returned error ${result}`
         // }
         core.info('Encoding modified Mods json');
-        const modManifest = (0, github_1.ConstructModEntry)(octokit, modJson, qmodUrl);
+        const modManifest = await (0, github_1.ConstructModEntry)(octokit, modJson, qmodUrl);
         core.info(JSON.stringify(modManifest, null, 2));
         // convert to base64
         const encodedModManifest = Buffer.from(JSON.stringify(modManifest, null, 2)).toString('base64');
@@ -44391,7 +44391,6 @@ async function run() {
             title: `${modJson.id} ${modJson.version} - ${modJson.packageId} ${modJson.packageVersion}`,
             body: 'Automatically generated pull request',
             head: `${forkedModRepo.owner.login}:${newBranch}`,
-            head_repo: `${modRepo.owner.login}/${modRepo.name}`,
             maintainer_can_modify: true
         });
         core.info(`Made PR at ${pullRequest.html_url}`);

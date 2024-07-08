@@ -75,7 +75,7 @@ export async function run(): Promise<void> {
 
     core.info('Encoding modified Mods json')
 
-    const modManifest = ConstructModEntry(octokit, modJson, qmodUrl)
+    const modManifest = await ConstructModEntry(octokit, modJson, qmodUrl)
     core.info(JSON.stringify(modManifest, null, 2))
 
     // convert to base64
@@ -140,7 +140,6 @@ export async function run(): Promise<void> {
       body: 'Automatically generated pull request',
 
       head: `${forkedModRepo.owner.login}:${newBranch}`,
-      head_repo: `${modRepo.owner.login}/${modRepo.name}`,
 
       maintainer_can_modify: true
     })
