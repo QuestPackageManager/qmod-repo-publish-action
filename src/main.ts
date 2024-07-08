@@ -79,11 +79,16 @@ export async function run(): Promise<void> {
 
     core.info('Commiting modified Mods json')
 
-    const fileName = modJson.packageVersion ?? 'global'
+    const fileName = `${modJson.id}-${modJson.version}.json`
     await octokit.rest.repos.createOrUpdateFileContents({
       owner: forkedModRepo.owner.login,
       repo: forkedModRepo.name,
-      path: path.join('/', 'mods', `${fileName}.json`),
+      path: path.join(
+        '/',
+        'mods',
+        modJson.packageVersion ?? 'global',
+        fileName
+      ),
       message: `Added ${modJson.name} v${modJson.version} to the Mod Repo`,
       content: encodedModManifest,
       branch: `refs/heads/${newBranch}`

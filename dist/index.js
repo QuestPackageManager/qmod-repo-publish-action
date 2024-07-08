@@ -44339,11 +44339,11 @@ async function run() {
         // convert to base64
         const encodedModManifest = btoa(JSON.stringify(modManifest, null, 2));
         core.info('Commiting modified Mods json');
-        const fileName = modJson.packageVersion ?? 'global';
+        const fileName = `${modJson.id}-${modJson.version}.json`;
         await octokit.rest.repos.createOrUpdateFileContents({
             owner: forkedModRepo.owner.login,
             repo: forkedModRepo.name,
-            path: path_1.default.join('/', 'mods', `${fileName}.json`),
+            path: path_1.default.join('/', 'mods', modJson.packageVersion ?? 'global', fileName),
             message: `Added ${modJson.name} v${modJson.version} to the Mod Repo`,
             content: encodedModManifest,
             branch: `refs/heads/${newBranch}`
