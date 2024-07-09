@@ -44244,21 +44244,20 @@ async function FetchUpstream(octokit, repo, upstreamRepo, branch, upstreamBranch
         core.info(`${repo.owner.login}:${branch} is up-to-date`);
     }
 }
-async function ConstructModEntry(octokit, modJson, downloadUrl) {
-    const currentUser = (await octokit.rest.users.getByUsername({
-        username: github.context.repo.owner
-    })).data;
-    const authorIcon = currentUser.avatar_url;
+async function ConstructModEntry(modJson, downloadUrl) {
     const modEntry = {
         name: modJson.name,
         description: modJson.description,
         id: modJson.id,
         version: modJson.version,
-        downloadLink: downloadUrl,
+        download: downloadUrl,
         source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
-        authorIcon,
         author: modJson.author,
-        cover: modJson.coverImage
+        cover: modJson.coverImage ?? null,
+        modloader: modJson.modloader ?? 'QuestLoader',
+        funding: null,
+        website: null,
+        hash: null
     };
     return modEntry;
 }
@@ -44317,6 +44316,9 @@ async function run() {
         // You can also pass in additional options as a second parameter to getOctokit
         // const octokit = github.getOctokit(myToken, {userAgent: "MyActionVersion1"});
         const octokit = github.getOctokit(myToken);
+        const currentUser = (await octokit.rest.users.getByUsername({
+            username: github.context.repo.owner
+        })).data;
         core.info(`Downloading qmod from ${qmodUrl}`);
         const qmod = await fetch(qmodUrl);
         core.info(`Successfully got qmod`);
@@ -44345,7 +44347,7 @@ async function run() {
         //   throw `Git clone returned error ${result}`
         // }
         core.info('Encoding modified Mods json');
-        const modManifest = await (0, github_1.ConstructModEntry)(octokit, modJson, qmodUrl);
+        const modManifest = await (0, github_1.ConstructModEntry)(modJson, qmodUrl);
         core.info(JSON.stringify(modManifest, null, 2));
         // convert to base64
         const encodedModManifest = Buffer.from(JSON.stringify(modManifest, null, 2)).toString('base64');
@@ -44383,17 +44385,37 @@ async function run() {
             sha: existingFileSha
         });
         core.info('Made commit, creating PR now');
-        // make PR
-        const { data: pullRequest } = await octokit.rest.pulls.create({
+        const forkedHead = `${forkedModRepo.owner.login}:${newBranch}`;
+        const requests = await octokit.rest.pulls.list({
             owner: modRepo.owner.login,
             repo: modRepo.name,
             base: modRepo.default_branch,
-            title: `${modJson.id} ${modJson.version} - ${modJson.packageId} ${modJson.packageVersion}`,
-            body: 'Automatically generated pull request',
-            head: `${forkedModRepo.owner.login}:${newBranch}`,
-            maintainer_can_modify: true
+            head: forkedHead
         });
-        core.info(`Made PR at ${pullRequest.html_url}`);
+        const existingPR = requests.data.find(x => x.user?.login === currentUser.login);
+        if (existingPR) {
+            console.info('PR is already created, sending update comment');
+            await octokit.rest.issues.createComment({
+                issue_number: existingPR.number,
+                owner: modRepo.owner.login,
+                repo: modRepo.name,
+                body: 'Updated contents of the manifest'
+            });
+            core.info(`Made PR at ${existingPR.html_url}`);
+        }
+        else {
+            // make PR
+            const { data: pullRequest } = await octokit.rest.pulls.create({
+                owner: modRepo.owner.login,
+                repo: modRepo.name,
+                base: modRepo.default_branch,
+                title: `${modJson.id} ${modJson.version} - ${modJson.packageId} ${modJson.packageVersion}`,
+                body: 'Automatically generated pull request',
+                head: forkedHead,
+                maintainer_can_modify: true
+            });
+            core.info(`Made PR at ${pullRequest.html_url}`);
+        }
     }
     catch (error) {
         // Fail the workflow run if an error occurs

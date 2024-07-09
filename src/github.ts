@@ -7,18 +7,48 @@ export type GithubRepo = Awaited<
   ReturnType<InstanceType<typeof GitHub>['rest']['repos']['get']>
 >['data']
 
+export type GithubUser = Awaited<
+  ReturnType<InstanceType<typeof GitHub>['rest']['users']['getByUsername']>
+>['data']
+
 export type GithubRepoLite = GithubRepo & NonNullable<GithubRepo['parent']>
 
 export interface ModEntry {
-  name: string
-  description: string | undefined
-  id: string
-  version: string
-  downloadLink: string
-  source: string
-  authorIcon: string
-  author: string
-  cover: string | undefined
+  /** The name of the mod. */
+  name: string | null
+
+  /** A description of what the mod does. */
+  description?: string | null
+
+  /** The ID of the mod. */
+  id: string | null
+
+  /** The version of the mod. */
+  version: string | null
+
+  /** The author(s) of the mod. */
+  author: string | null
+
+  /** The mod loader used by the mod. */
+  modloader: string | null
+
+  /** A direct link to the .qmod file. */
+  download: string | null
+
+  /** A link to the source code for the mod. */
+  source: string | null
+
+  /** A direct link to a cover image. */
+  cover: string | null
+
+  /** A link to a page where people can donate some money. */
+  funding: string | null
+
+  /** A link to a website for the mod. */
+  website: string | null
+
+  /** A SHA1 hash of the download. */
+  hash?: string | null
 }
 
 export async function getFork(
@@ -171,28 +201,22 @@ export async function FetchUpstream(
 }
 
 export async function ConstructModEntry(
-  octokit: InstanceType<typeof GitHub>,
   modJson: ModJSON,
   downloadUrl: string
 ): Promise<ModEntry> {
-  const currentUser = (
-    await octokit.rest.users.getByUsername({
-      username: github.context.repo.owner
-    })
-  ).data
-
-  const authorIcon = currentUser.avatar_url
-
   const modEntry: ModEntry = {
     name: modJson.name,
     description: modJson.description,
     id: modJson.id,
     version: modJson.version,
-    downloadLink: downloadUrl,
+    download: downloadUrl,
     source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
-    authorIcon,
     author: modJson.author,
-    cover: modJson.coverImage
+    cover: modJson.coverImage ?? null,
+    modloader: modJson.modloader ?? 'QuestLoader',
+    funding: null,
+    website: null,
+    hash: null
   }
 
   return modEntry

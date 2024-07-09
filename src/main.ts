@@ -39,6 +39,12 @@ export async function run(): Promise<void> {
     // const octokit = github.getOctokit(myToken, {userAgent: "MyActionVersion1"});
     const octokit = github.getOctokit(myToken)
 
+    const currentUser = (
+      await octokit.rest.users.getByUsername({
+        username: github.context.repo.owner
+      })
+    ).data
+
     core.info(`Downloading qmod from ${qmodUrl}`)
     const qmod = await fetch(qmodUrl)
     core.info(`Successfully got qmod`)
@@ -75,7 +81,7 @@ export async function run(): Promise<void> {
 
     core.info('Encoding modified Mods json')
 
-    const modManifest = await ConstructModEntry(octokit, modJson, qmodUrl)
+    const modManifest = await ConstructModEntry(modJson, qmodUrl)
     core.info(JSON.stringify(modManifest, null, 2))
 
     // convert to base64
@@ -130,21 +136,46 @@ export async function run(): Promise<void> {
 
     core.info('Made commit, creating PR now')
 
-    // make PR
-    const { data: pullRequest } = await octokit.rest.pulls.create({
+    const forkedHead = `${forkedModRepo.owner.login}:${newBranch}`
+
+    const requests = await octokit.rest.pulls.list({
       owner: modRepo.owner.login,
       repo: modRepo.name,
       base: modRepo.default_branch,
-
-      title: `${modJson.id} ${modJson.version} - ${modJson.packageId} ${modJson.packageVersion}`,
-      body: 'Automatically generated pull request',
-
-      head: `${forkedModRepo.owner.login}:${newBranch}`,
-
-      maintainer_can_modify: true
+      head: forkedHead
     })
 
-    core.info(`Made PR at ${pullRequest.html_url}`)
+    const existingPR = requests.data.find(
+      x => x.user?.login === currentUser.login
+    )
+
+    if (existingPR) {
+      console.info('PR is already created, sending update comment')
+      await octokit.rest.issues.createComment({
+        issue_number: existingPR.number,
+        owner: modRepo.owner.login,
+        repo: modRepo.name,
+        body: 'Updated contents of the manifest'
+      })
+
+      core.info(`Made PR at ${existingPR.html_url}`)
+    } else {
+      // make PR
+      const { data: pullRequest } = await octokit.rest.pulls.create({
+        owner: modRepo.owner.login,
+        repo: modRepo.name,
+        base: modRepo.default_branch,
+
+        title: `${modJson.id} ${modJson.version} - ${modJson.packageId} ${modJson.packageVersion}`,
+        body: 'Automatically generated pull request',
+
+        head: forkedHead,
+
+        maintainer_can_modify: true
+      })
+
+      core.info(`Made PR at ${pullRequest.html_url}`)
+    }
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
