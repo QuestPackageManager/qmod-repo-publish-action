@@ -212,8 +212,8 @@ export async function ConstructModEntry(
     download: downloadUrl,
     source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
     author: modJson.author,
-    cover: modJson.coverImage ?? null,
     modloader: modJson.modloader ?? 'QuestLoader',
+    cover: null,
     funding: null,
     website: null,
     hash: null
