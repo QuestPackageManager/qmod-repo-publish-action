@@ -61,6 +61,27 @@ export interface ModEntry {
   hash?: string | null
 }
 
+/**
+ * Fetches the final redirected location of a URL.
+ *
+ * @param url - The URL to fetch the redirected location for.
+ * @returns A promise that resolves to the redirected location URL, or the original URL if no redirection occurs.
+ */
+export async function fetchRedirectedLocation(url: string): Promise<string> {
+  try {
+    const response = await fetch(url, { method: 'HEAD', redirect: 'manual' });
+
+    if (response.status >= 300 && response.status < 400 && response.headers.get('location')) {
+      const redirectedUrl = new URL(response.headers.get('location') as string, url).href;
+      return redirectedUrl;
+    } else {
+      return url;
+    }
+  } catch (error: any) {
+    throw new Error(`Error fetching redirected URL: ${error.message}`);
+  }
+}
+
 export async function ConstructModEntry(
   modJson: ModJSON,
   downloadUrl: string
@@ -71,13 +92,13 @@ export async function ConstructModEntry(
     id: modJson.id,
     version: modJson.version,
     author: modJson.author,
-    authorIcon: null,
+    authorIcon: await fetchRedirectedLocation(`https://github.com/${github.context.repo.owner}.png`),
     modloader: modJson.modloader ?? 'QuestLoader',
     download: downloadUrl,
     source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
     cover: null,
     funding: null,
-    website: null
+    website: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`
   }
 
   if (modJson.porter) {
