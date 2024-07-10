@@ -7444,71 +7444,6 @@ module.exports = function (data, options) {
 
 /***/ }),
 
-/***/ 7968:
-/***/ ((module) => {
-
-"use strict";
-
-
-module.exports = {
-    /**
-     * True if this is running in Nodejs, will be undefined in a browser.
-     * In a browser, browserify won't include this file and the whole module
-     * will be resolved an empty object.
-     */
-    isNode : typeof Buffer !== "undefined",
-    /**
-     * Create a new nodejs Buffer from an existing content.
-     * @param {Object} data the data to pass to the constructor.
-     * @param {String} encoding the encoding to use.
-     * @return {Buffer} a new Buffer.
-     */
-    newBufferFrom: function(data, encoding) {
-        if (Buffer.from && Buffer.from !== Uint8Array.from) {
-            return Buffer.from(data, encoding);
-        } else {
-            if (typeof data === "number") {
-                // Safeguard for old Node.js versions. On newer versions,
-                // Buffer.from(number) / Buffer(number, encoding) already throw.
-                throw new Error("The \"data\" argument must not be a number");
-            }
-            return new Buffer(data, encoding);
-        }
-    },
-    /**
-     * Create a new nodejs Buffer with the specified size.
-     * @param {Integer} size the size of the buffer.
-     * @return {Buffer} a new Buffer.
-     */
-    allocBuffer: function (size) {
-        if (Buffer.alloc) {
-            return Buffer.alloc(size);
-        } else {
-            var buf = new Buffer(size);
-            buf.fill(0);
-            return buf;
-        }
-    },
-    /**
-     * Find out if an object is a Buffer.
-     * @param {Object} b the object to test.
-     * @return {Boolean} true if the object is a Buffer, false otherwise.
-     */
-    isBuffer : function(b){
-        return Buffer.isBuffer(b);
-    },
-
-    isStream : function (obj) {
-        return obj &&
-            typeof obj.on === "function" &&
-            typeof obj.pause === "function" &&
-            typeof obj.resume === "function";
-    }
-};
-
-
-/***/ }),
-
 /***/ 3581:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -7637,6 +7572,71 @@ NodejsStreamOutputAdapter.prototype._read = function() {
 };
 
 module.exports = NodejsStreamOutputAdapter;
+
+
+/***/ }),
+
+/***/ 7968:
+/***/ ((module) => {
+
+"use strict";
+
+
+module.exports = {
+    /**
+     * True if this is running in Nodejs, will be undefined in a browser.
+     * In a browser, browserify won't include this file and the whole module
+     * will be resolved an empty object.
+     */
+    isNode : typeof Buffer !== "undefined",
+    /**
+     * Create a new nodejs Buffer from an existing content.
+     * @param {Object} data the data to pass to the constructor.
+     * @param {String} encoding the encoding to use.
+     * @return {Buffer} a new Buffer.
+     */
+    newBufferFrom: function(data, encoding) {
+        if (Buffer.from && Buffer.from !== Uint8Array.from) {
+            return Buffer.from(data, encoding);
+        } else {
+            if (typeof data === "number") {
+                // Safeguard for old Node.js versions. On newer versions,
+                // Buffer.from(number) / Buffer(number, encoding) already throw.
+                throw new Error("The \"data\" argument must not be a number");
+            }
+            return new Buffer(data, encoding);
+        }
+    },
+    /**
+     * Create a new nodejs Buffer with the specified size.
+     * @param {Integer} size the size of the buffer.
+     * @return {Buffer} a new Buffer.
+     */
+    allocBuffer: function (size) {
+        if (Buffer.alloc) {
+            return Buffer.alloc(size);
+        } else {
+            var buf = new Buffer(size);
+            buf.fill(0);
+            return buf;
+        }
+    },
+    /**
+     * Find out if an object is a Buffer.
+     * @param {Object} b the object to test.
+     * @return {Boolean} true if the object is a Buffer, false otherwise.
+     */
+    isBuffer : function(b){
+        return Buffer.isBuffer(b);
+    },
+
+    isStream : function (obj) {
+        return obj &&
+            typeof obj.on === "function" &&
+            typeof obj.pause === "function" &&
+            typeof obj.resume === "function";
+    }
+};
 
 
 /***/ }),
@@ -44149,7 +44149,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getFork = getFork;
 exports.CreateBranchIfRequired = CreateBranchIfRequired;
 exports.FetchUpstream = FetchUpstream;
-exports.ConstructModEntry = ConstructModEntry;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const util_1 = __nccwpck_require__(3837);
@@ -44253,23 +44252,6 @@ async function FetchUpstream(octokit, repo, upstreamRepo, branch, upstreamBranch
         core.info(`${repo.owner.login}:${branch} is up-to-date`);
     }
 }
-async function ConstructModEntry(modJson, downloadUrl) {
-    const modEntry = {
-        name: modJson.name,
-        description: modJson.description,
-        id: modJson.id,
-        version: modJson.version,
-        download: downloadUrl,
-        source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
-        author: modJson.author,
-        modloader: modJson.modloader ?? 'QuestLoader',
-        cover: null,
-        funding: null,
-        website: null,
-        hash: null
-    };
-    return modEntry;
-}
 
 
 /***/ }),
@@ -44306,12 +44288,33 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ConstructModEntry = ConstructModEntry;
 exports.run = run;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const jszip_1 = __importDefault(__nccwpck_require__(3592));
 const github_1 = __nccwpck_require__(8526);
 const path_1 = __importDefault(__nccwpck_require__(1017));
+async function ConstructModEntry(modJson, downloadUrl) {
+    const modEntry = {
+        name: modJson.name,
+        description: modJson.description,
+        id: modJson.id,
+        version: modJson.version,
+        download: downloadUrl,
+        source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
+        author: modJson.author,
+        modloader: modJson.modloader ?? 'QuestLoader',
+        cover: null,
+        funding: null,
+        website: null,
+        hash: null
+    };
+    if (modJson.porter) {
+        modEntry.author = `${modJson.porter}, ${modEntry.author}`;
+    }
+    return modEntry;
+}
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
@@ -44356,7 +44359,7 @@ async function run() {
         //   throw `Git clone returned error ${result}`
         // }
         core.info('Encoding modified Mods json');
-        const modManifest = await (0, github_1.ConstructModEntry)(modJson, qmodUrl);
+        const modManifest = await ConstructModEntry(modJson, qmodUrl);
         core.info(JSON.stringify(modManifest, null, 2));
         // convert to base64
         const encodedModManifest = Buffer.from(JSON.stringify(modManifest, null, 2)).toString('base64');
