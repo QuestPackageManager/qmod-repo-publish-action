@@ -36,6 +36,9 @@ export interface ModEntry {
   /** The author(s) of the mod. */
   author: string | null
 
+  /** A url to a square image. */
+  authorIcon: string | null
+
   /** The mod loader used by the mod. */
   modloader: string | null
 
@@ -47,7 +50,7 @@ export interface ModEntry {
 
   /** A direct link to a cover image. */
   cover: string | null
-
+  
   /** A link to a page where people can donate some money. */
   funding: string | null
 
@@ -67,14 +70,14 @@ export async function ConstructModEntry(
     description: modJson.description,
     id: modJson.id,
     version: modJson.version,
+    author: modJson.author,
+    authorIcon: null,
+    modloader: modJson.modloader ?? 'QuestLoader',
     download: downloadUrl,
     source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
-    author: modJson.author,
-    modloader: modJson.modloader ?? 'QuestLoader',
     cover: null,
     funding: null,
-    website: null,
-    hash: null
+    website: null
   }
 
   if (modJson.porter) {
