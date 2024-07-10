@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import { GitHub } from '@actions/github/lib/utils'
 import { ModJSON } from './main'
+import { promisify } from 'util'
 
 export type GithubRepo = Awaited<
   ReturnType<InstanceType<typeof GitHub>['rest']['repos']['get']>
@@ -71,28 +72,36 @@ export async function getFork(
     core.warning('Failed to find a fork of the mod repo, creating it now')
     core.info('Getting Mod Repo')
 
-    const modRepo = (
-      await octokit.rest.repos.get({
-        owner: repoOwner,
-        repo: repoName
-      })
-    ).data
-
     core.info('Creating Fork')
 
-    await octokit.rest.repos.createFork({
+    const forkResult = await octokit.rest.repos.createFork({
       owner: repoOwner,
       repo: repoName
     })
 
     core.info('Getting Fork')
 
-    const forkedModRepo = (
-      await octokit.rest.repos.get({
-        owner: github.context.repo.owner,
-        repo: modRepo.name
-      })
-    ).data
+    let forkedModRepo: GithubRepo | null = null
+
+    for (let i = 0; i < 10; i++) {
+      try {
+        forkedModRepo = (
+          await octokit.rest.repos.get({
+            owner: forkResult.data.owner.login,
+            repo: forkResult.data.name
+          })
+        ).data
+      } catch (e) {
+        forkedModRepo = null
+        await promisify(setTimeout)(5000)
+      }
+    }
+
+    if (!forkedModRepo) {
+      throw new Error(
+        `Forked repo was not found at ${forkResult.data.owner.login}/${forkResult.data.name}`
+      )
+    }
 
     if (!forkedModRepo.fork) {
       throw new Error(

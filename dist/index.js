@@ -44152,6 +44152,7 @@ exports.FetchUpstream = FetchUpstream;
 exports.ConstructModEntry = ConstructModEntry;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
+const util_1 = __nccwpck_require__(3837);
 async function getFork(octokit, repoOwner, repoName) {
     core.info('Getting Fork of Mod Repo');
     try {
@@ -44164,20 +44165,28 @@ async function getFork(octokit, repoOwner, repoName) {
     catch {
         core.warning('Failed to find a fork of the mod repo, creating it now');
         core.info('Getting Mod Repo');
-        const modRepo = (await octokit.rest.repos.get({
-            owner: repoOwner,
-            repo: repoName
-        })).data;
         core.info('Creating Fork');
-        await octokit.rest.repos.createFork({
+        const forkResult = await octokit.rest.repos.createFork({
             owner: repoOwner,
             repo: repoName
         });
         core.info('Getting Fork');
-        const forkedModRepo = (await octokit.rest.repos.get({
-            owner: github.context.repo.owner,
-            repo: modRepo.name
-        })).data;
+        let forkedModRepo = null;
+        for (let i = 0; i < 10; i++) {
+            try {
+                forkedModRepo = (await octokit.rest.repos.get({
+                    owner: forkResult.data.owner.login,
+                    repo: forkResult.data.name
+                })).data;
+            }
+            catch (e) {
+                forkedModRepo = null;
+                await (0, util_1.promisify)(setTimeout)(5000);
+            }
+        }
+        if (!forkedModRepo) {
+            throw new Error(`Forked repo was not found at ${forkResult.data.owner.login}/${forkResult.data.name}`);
+        }
         if (!forkedModRepo.fork) {
             throw new Error(`${forkedModRepo.html_url} is not a fork of https://github.com/${repoName}/${repoOwner}`);
         }
