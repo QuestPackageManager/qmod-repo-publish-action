@@ -156,7 +156,7 @@ export async function run(): Promise<void> {
     const modRepoBlacklist = (
       await (
         await fetch(
-          'https://raw.githubusercontent.com/DanTheMan827/bsqmods/main/mods/updater-repo-blacklist.txt'
+          `https://raw.githubusercontent.com/${modRepo.owner.login}/${modRepo.name}/${modRepo.default_branch}/mods/updater-repo-blacklist.txt`
         )
       ).text()
     )

@@ -44367,7 +44367,7 @@ async function run() {
         const modJson = JSON.parse(await modJsonFile.async('text'));
         const forkedModRepo = await (0, github_1.getFork)(octokit, qmodRepoOwner, qmodRepoName);
         const modRepo = forkedModRepo.parent;
-        const modRepoBlacklist = (await (await fetch('https://raw.githubusercontent.com/DanTheMan827/bsqmods/main/mods/updater-repo-blacklist.txt')).text())
+        const modRepoBlacklist = (await (await fetch(`https://raw.githubusercontent.com/${modRepo.owner.login}/${modRepo.name}/${modRepo.default_branch}/mods/updater-repo-blacklist.txt`)).text())
             .trim()
             .split('\n')
             .map(line => line.trim());
