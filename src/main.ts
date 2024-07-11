@@ -50,7 +50,7 @@ export interface ModEntry {
 
   /** A direct link to a cover image. */
   cover: string | null
-  
+
   /** A link to a page where people can donate some money. */
   funding: string | null
 
@@ -69,16 +69,23 @@ export interface ModEntry {
  */
 export async function fetchRedirectedLocation(url: string): Promise<string> {
   try {
-    const response = await fetch(url, { method: 'HEAD', redirect: 'manual' });
+    const response = await fetch(url, { method: 'HEAD', redirect: 'manual' })
 
-    if (response.status >= 300 && response.status < 400 && response.headers.get('location')) {
-      const redirectedUrl = new URL(response.headers.get('location') as string, url).href;
-      return redirectedUrl;
+    if (
+      response.status >= 300 &&
+      response.status < 400 &&
+      response.headers.get('location')
+    ) {
+      const redirectedUrl = new URL(
+        response.headers.get('location') as string,
+        url
+      ).href
+      return redirectedUrl
     } else {
-      return url;
+      return url
     }
   } catch (error: any) {
-    throw new Error(`Error fetching redirected URL: ${error.message}`);
+    throw new Error(`Error fetching redirected URL: ${error.message}`)
   }
 }
 
@@ -92,7 +99,9 @@ export async function ConstructModEntry(
     id: modJson.id,
     version: modJson.version,
     author: modJson.author,
-    authorIcon: await fetchRedirectedLocation(`https://github.com/${github.context.repo.owner}.png`),
+    authorIcon: await fetchRedirectedLocation(
+      `https://github.com/${github.context.repo.owner}.png`
+    ),
     modloader: modJson.modloader ?? 'QuestLoader',
     download: downloadUrl,
     source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
@@ -144,6 +153,17 @@ export async function run(): Promise<void> {
     const modJson: ModJSON = JSON.parse(await modJsonFile.async('text'))
     const forkedModRepo = await getFork(octokit, qmodRepoOwner, qmodRepoName)
     const modRepo = forkedModRepo.parent! as GithubRepoLite
+    const modRepoBlacklist = (
+      await (
+        await fetch(
+          'https://raw.githubusercontent.com/DanTheMan827/bsqmods/main/mods/updater-repo-blacklist.txt'
+        )
+      ).text()
+    )
+      .trim()
+      .split('\n')
+      .map(line => line.trim())
+    const repoName = `${forkedModRepo.owner.login}/${forkedModRepo.name}`
 
     const newBranch = `${modJson.id}-${modJson.version}-${modJson.packageVersion}`
 
@@ -181,31 +201,34 @@ export async function run(): Promise<void> {
       modJson.packageVersion ?? 'global',
       fileName
     )
+    const blacklistPath = 'mods/updater-repo-blacklist.txt'
 
-    let existingFileSha: string | undefined
+    async function getFileSha(filePath: string) {
+      try {
+        // Try to get the file content to retrieve the SHA
+        const { data: existingFile } = await octokit.rest.repos.getContent({
+          owner: forkedModRepo.owner.login,
+          repo: forkedModRepo.name,
+          path: filePath,
+          ref: `refs/heads/${newBranch}`
+        })
 
-    try {
-      // Try to get the file content to retrieve the SHA
-      const { data: existingFile } = await octokit.rest.repos.getContent({
-        owner: forkedModRepo.owner.login,
-        repo: forkedModRepo.name,
-        path: filePath,
-        ref: `refs/heads/${newBranch}`
-      })
+        // force unwrap
+        if (
+          !existingFile ||
+          typeof existingFile !== 'object' ||
+          Array.isArray(existingFile) ||
+          existingFile.type !== 'file'
+        ) {
+          throw new Error(`${filePath} is not a file at fork`)
+        }
 
-      // force unwrap
-      if (
-        !existingFile ||
-        typeof existingFile !== 'object' ||
-        Array.isArray(existingFile) ||
-        existingFile.type !== 'file'
-      ) {
-        throw new Error(`${filePath} is not a file at fork`)
+        return existingFile.sha
+      } catch (e) {
+        // ignore
       }
 
-      existingFileSha = existingFile.sha
-    } catch (e) {
-      // ignore
+      return undefined
     }
 
     await octokit.rest.repos.createOrUpdateFileContents({
@@ -215,8 +238,26 @@ export async function run(): Promise<void> {
       message: `Added ${modJson.name} v${modJson.version} to the Mod Repo`,
       content: encodedModManifest,
       branch: `refs/heads/${newBranch}`,
-      sha: existingFileSha
+      sha: await getFileSha(filePath)
     })
+
+    if (
+      !modRepoBlacklist
+        .map(line => line.toLowerCase())
+        .includes(repoName.toLowerCase())
+    ) {
+      modRepoBlacklist.push(repoName)
+
+      await octokit.rest.repos.createOrUpdateFileContents({
+        owner: forkedModRepo.owner.login,
+        repo: forkedModRepo.name,
+        path: blacklistPath,
+        message: `Added ${repoName} to the blacklist`,
+        content: `${modRepoBlacklist.join('\n')}\n`,
+        branch: `refs/heads/${newBranch}`,
+        sha: await getFileSha(blacklistPath)
+      })
+    }
 
     core.info('Made commit, creating PR now')
 
