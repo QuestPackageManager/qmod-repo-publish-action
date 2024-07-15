@@ -52,7 +52,7 @@ export interface ModEntry {
   cover: string | null
 
   /** A link to a page where people can donate some money. */
-  funding: string | null
+  funding: string[]
 
   /** A link to a website for the mod. */
   website: string | null
@@ -106,7 +106,7 @@ export async function ConstructModEntry(
     download: downloadUrl,
     source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
     cover: null,
-    funding: null,
+    funding: [],
     website: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`
   }
 

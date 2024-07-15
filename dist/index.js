@@ -44331,7 +44331,7 @@ async function ConstructModEntry(modJson, downloadUrl) {
         download: downloadUrl,
         source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
         cover: null,
-        funding: null,
+        funding: [],
         website: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`
     };
     if (modJson.porter) {
