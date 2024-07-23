@@ -44371,7 +44371,7 @@ async function run() {
             .trim()
             .split('\n')
             .map(line => line.trim());
-        const repoName = `${forkedModRepo.owner.login}/${forkedModRepo.name}`;
+        const repoName = `${github.context.repo.owner}/${github.context.repo.repo}`;
         const newBranch = `${modJson.id}-${modJson.version}-${modJson.packageVersion}`;
         core.info('Fork made, fetching upstream');
         // await FetchUpstream(
@@ -44391,7 +44391,9 @@ async function run() {
         const modManifest = await ConstructModEntry(modJson, qmodUrl);
         core.info(JSON.stringify(modManifest, null, 2));
         // convert to base64
-        const encodedModManifest = Buffer.from(JSON.stringify(modManifest, null, 2)).toString('base64');
+        function base64Encode(data) {
+            return Buffer.from(data).toString('base64');
+        }
         core.info('Commiting modified Mods json');
         const fileName = `${modJson.id}-${modJson.version}.json`;
         const filePath = path_1.default.join('mods', modJson.packageVersion ?? 'global', fileName);
@@ -44424,7 +44426,7 @@ async function run() {
             repo: forkedModRepo.name,
             path: filePath,
             message: `Added ${modJson.name} v${modJson.version} to the Mod Repo`,
-            content: encodedModManifest,
+            content: base64Encode(JSON.stringify(modManifest, null, 2)),
             branch: `refs/heads/${newBranch}`,
             sha: await getFileSha(filePath)
         });
@@ -44437,7 +44439,7 @@ async function run() {
                 repo: forkedModRepo.name,
                 path: blacklistPath,
                 message: `Added ${repoName} to the blacklist`,
-                content: `${modRepoBlacklist.join('\n')}\n`,
+                content: base64Encode(`${modRepoBlacklist.join('\n')}\n`),
                 branch: `refs/heads/${newBranch}`,
                 sha: await getFileSha(blacklistPath)
             });
