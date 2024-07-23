@@ -42,6 +42,6 @@ permissions:
       ${{
       fromJSON(steps.upload_file_release.outputs.assets)[0].browser_download_url
       }}
-    qmod_repo_owner: 'dantheman827'
+    qmod_repo_owner: 'QuestPackageManager'
     qmod_repo_name: 'bsqmods'
 ```
