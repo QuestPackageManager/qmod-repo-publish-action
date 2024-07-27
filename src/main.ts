@@ -52,7 +52,7 @@ export interface ModEntry {
   cover: string | null
 
   /** A link to a page where people can donate some money. */
-  funding: string | null
+  funding: string[]
 
   /** A link to a website for the mod. */
   website: string | null
@@ -106,7 +106,7 @@ export async function ConstructModEntry(
     download: downloadUrl,
     source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
     cover: null,
-    funding: null,
+    funding: [],
     website: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`
   }
 
@@ -163,7 +163,7 @@ export async function run(): Promise<void> {
       .trim()
       .split('\n')
       .map(line => line.trim())
-    const repoName = `${forkedModRepo.owner.login}/${forkedModRepo.name}`
+    const repoName = `${github.context.repo.owner}/${github.context.repo.repo}`
 
     const newBranch = `${modJson.id}-${modJson.version}-${modJson.packageVersion}`
 
@@ -189,9 +189,9 @@ export async function run(): Promise<void> {
     core.info(JSON.stringify(modManifest, null, 2))
 
     // convert to base64
-    const encodedModManifest = Buffer.from(
-      JSON.stringify(modManifest, null, 2)
-    ).toString('base64')
+    function base64Encode(data: string): string {
+      return Buffer.from(data).toString('base64')
+    }
 
     core.info('Commiting modified Mods json')
 
@@ -236,7 +236,7 @@ export async function run(): Promise<void> {
       repo: forkedModRepo.name,
       path: filePath,
       message: `Added ${modJson.name} v${modJson.version} to the Mod Repo`,
-      content: encodedModManifest,
+      content: base64Encode(JSON.stringify(modManifest, null, 2)),
       branch: `refs/heads/${newBranch}`,
       sha: await getFileSha(filePath)
     })
@@ -253,7 +253,7 @@ export async function run(): Promise<void> {
         repo: forkedModRepo.name,
         path: blacklistPath,
         message: `Added ${repoName} to the blacklist`,
-        content: `${modRepoBlacklist.join('\n')}\n`,
+        content: base64Encode(`${modRepoBlacklist.join('\n')}\n`),
         branch: `refs/heads/${newBranch}`,
         sha: await getFileSha(blacklistPath)
       })
