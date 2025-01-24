@@ -127,14 +127,18 @@ export async function run(): Promise<void> {
     const qmodUrl = core.getInput('qmod_url')
     const qmodRepoOwner = core.getInput('qmod_repo_owner')
     const qmodRepoName = core.getInput('qmod_repo_name')
+    const octokit = github.getOctokit(myToken)
+    const authenticatedUser = await octokit.rest.users.getAuthenticated()
+    const forkOwner =
+      core.getInput('fork_owner') || authenticatedUser.data.login
+    const forkName = core.getInput('fork_name')?.trim()
 
     // You can also pass in additional options as a second parameter to getOctokit
     // const octokit = github.getOctokit(myToken, {userAgent: "MyActionVersion1"});
-    const octokit = github.getOctokit(myToken)
 
     const currentUser = (
       await octokit.rest.users.getByUsername({
-        username: github.context.repo.owner
+        username: forkOwner
       })
     ).data
 
@@ -151,7 +155,13 @@ export async function run(): Promise<void> {
     }
 
     const modJson: ModJSON = JSON.parse(await modJsonFile.async('text'))
-    const forkedModRepo = await getFork(octokit, qmodRepoOwner, qmodRepoName)
+    const forkedModRepo = await getFork(
+      octokit,
+      forkOwner,
+      forkName || qmodRepoName,
+      qmodRepoOwner,
+      qmodRepoName
+    )
     const modRepo = forkedModRepo.parent! as GithubRepoLite
     const modRepoBlacklist = (
       await (
