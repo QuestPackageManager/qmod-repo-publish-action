@@ -15,6 +15,8 @@ export type GithubRepoLite = GithubRepo & NonNullable<GithubRepo['parent']>
 
 export async function getFork(
   octokit: InstanceType<typeof GitHub>,
+  forkOwner: string,
+  forkName: string,
   repoOwner: string,
   repoName: string
 ): Promise<GithubRepoLite> {
@@ -23,8 +25,8 @@ export async function getFork(
   try {
     const forkedModRepo = (
       await octokit.rest.repos.get({
-        owner: github.context.repo.owner,
-        repo: repoName
+        owner: forkOwner,
+        repo: forkName || repoName
       })
     ).data as GithubRepoLite
 

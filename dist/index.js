@@ -44150,14 +44150,13 @@ exports.getFork = getFork;
 exports.CreateBranchIfRequired = CreateBranchIfRequired;
 exports.FetchUpstream = FetchUpstream;
 const core = __importStar(__nccwpck_require__(2186));
-const github = __importStar(__nccwpck_require__(5438));
 const util_1 = __nccwpck_require__(3837);
-async function getFork(octokit, repoOwner, repoName) {
+async function getFork(octokit, forkOwner, forkName, repoOwner, repoName) {
     core.info('Getting Fork of Mod Repo');
     try {
         const forkedModRepo = (await octokit.rest.repos.get({
-            owner: github.context.repo.owner,
-            repo: repoName
+            owner: forkOwner,
+            repo: forkName || repoName
         })).data;
         return forkedModRepo;
     }
@@ -44349,11 +44348,14 @@ async function run() {
         const qmodUrl = core.getInput('qmod_url');
         const qmodRepoOwner = core.getInput('qmod_repo_owner');
         const qmodRepoName = core.getInput('qmod_repo_name');
+        const octokit = github.getOctokit(myToken);
+        const authenticatedUser = await octokit.rest.users.getAuthenticated();
+        const forkOwner = core.getInput('fork_owner') || authenticatedUser.data.login;
+        const forkName = core.getInput('fork_name')?.trim();
         // You can also pass in additional options as a second parameter to getOctokit
         // const octokit = github.getOctokit(myToken, {userAgent: "MyActionVersion1"});
-        const octokit = github.getOctokit(myToken);
         const currentUser = (await octokit.rest.users.getByUsername({
-            username: github.context.repo.owner
+            username: forkOwner
         })).data;
         core.info(`Downloading qmod from ${qmodUrl}`);
         const qmod = await fetch(qmodUrl);
@@ -44365,7 +44367,7 @@ async function run() {
             return;
         }
         const modJson = JSON.parse(await modJsonFile.async('text'));
-        const forkedModRepo = await (0, github_1.getFork)(octokit, qmodRepoOwner, qmodRepoName);
+        const forkedModRepo = await (0, github_1.getFork)(octokit, forkOwner, forkName || qmodRepoName, qmodRepoOwner, qmodRepoName);
         const modRepo = forkedModRepo.parent;
         const modRepoBlacklist = (await (await fetch(`https://raw.githubusercontent.com/${modRepo.owner.login}/${modRepo.name}/${modRepo.default_branch}/mods/updater-repo-blacklist.txt`)).text())
             .trim()
