@@ -132,42 +132,25 @@ export async function FetchUpstream(
     `Checking if ${repo.owner.login}:${branch} is behind ${upstreamRepo.owner.login}:${upstreamBranch}`
   )
 
-  const compareResults = (
-    await octokit.rest.repos.compareCommits({
+  const upstreamBranchReference = (
+    await octokit.rest.git.getRef({
       owner: upstreamRepo.owner.login,
       repo: upstreamRepo.name,
-      base: upstreamBranch,
-      head: `${repo.owner.login}:${branch}`
+      ref: `heads/${upstreamBranch}`
     })
   ).data
 
-  if (compareResults.behind_by > 0) {
-    core.info(
-      `${repo.owner.login}:${branch} is behind by ${compareResults.behind_by} commits. Fetching Upstream...`
+  try {
+    await octokit.rest.git.updateRef({
+      owner: repo.owner.login,
+      repo: repo.name,
+      ref: `heads/${branch}`,
+      sha: upstreamBranchReference.object.sha,
+      force: true
+    })
+  } catch (error) {
+    throw new Error(
+      `Failed to fetch upstream. This can be fixed by performing a manual merge\nError: ${error}`
     )
-
-    const upstreamBranchReference = (
-      await octokit.rest.git.getRef({
-        owner: upstreamRepo.owner.login,
-        repo: upstreamRepo.name,
-        ref: `heads/${upstreamBranch}`
-      })
-    ).data
-
-    try {
-      await octokit.rest.git.updateRef({
-        owner: repo.owner.login,
-        repo: repo.name,
-        ref: `heads/${branch}`,
-        sha: upstreamBranchReference.object.sha,
-        force: true
-      })
-    } catch (error) {
-      throw new Error(
-        `Failed to fetch upstream. This can be fixed by performing a manual merge\nError: ${error}`
-      )
-    }
-  } else {
-    core.info(`${repo.owner.login}:${branch} is up-to-date`)
   }
 }
