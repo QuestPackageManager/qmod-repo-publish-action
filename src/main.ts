@@ -241,12 +241,41 @@ export async function run(): Promise<void> {
       return undefined
     }
 
+    const commitTitle = `${modJson.name} ${modJson.version?.trim() && `v${modJson.version.trim()}`}`
+    const commitBody = [
+      ...[
+        ['ID', modJson.id?.trim()],
+        ['Author', modJson.author?.trim()],
+        ['Mod Loader', modJson.modloader?.trim()],
+        ['Game Version', (modJson.packageVersion ?? 'global').trim()]
+      ]
+        .filter(([_, value]) => value)
+        .map(([key, value]) => `${key}: ${value}  `),
+      modJson.description?.trim()
+        ? `\n${'-'.repeat(50)}\n\n${modJson.description
+            .split('\n')
+            .map(line => line.trimEnd() + '  ')
+            .join('\n')}`
+        : ''
+    ]
+      .join('\n')
+      .trim()
+
+    const commitMessage = [
+      // Make our commit message
+      commitTitle,
+      '',
+      commitBody
+    ]
+      .join('\n')
+      .trim()
+
     await octokit.rest.repos.createOrUpdateFileContents({
       owner: forkedModRepo.owner.login,
       repo: forkedModRepo.name,
       path: filePath,
-      message: `Added ${modJson.name} v${modJson.version} to the Mod Repo`,
-      content: base64Encode(JSON.stringify(modManifest, null, 2)),
+      message: commitMessage,
+      content: base64Encode(`${JSON.stringify(modManifest, null, 2)}\n`),
       branch: `refs/heads/${newBranch}`,
       sha: await getFileSha(filePath)
     })
@@ -301,8 +330,8 @@ export async function run(): Promise<void> {
         repo: modRepo.name,
         base: modRepo.default_branch,
 
-        title: `${modJson.id} ${modJson.version} - ${modJson.packageId} ${modJson.packageVersion}`,
-        body: 'Automatically generated pull request',
+        title: commitTitle,
+        body: commitBody,
 
         head: forkedHead,
 
