@@ -7444,6 +7444,71 @@ module.exports = function (data, options) {
 
 /***/ }),
 
+/***/ 7968:
+/***/ ((module) => {
+
+"use strict";
+
+
+module.exports = {
+    /**
+     * True if this is running in Nodejs, will be undefined in a browser.
+     * In a browser, browserify won't include this file and the whole module
+     * will be resolved an empty object.
+     */
+    isNode : typeof Buffer !== "undefined",
+    /**
+     * Create a new nodejs Buffer from an existing content.
+     * @param {Object} data the data to pass to the constructor.
+     * @param {String} encoding the encoding to use.
+     * @return {Buffer} a new Buffer.
+     */
+    newBufferFrom: function(data, encoding) {
+        if (Buffer.from && Buffer.from !== Uint8Array.from) {
+            return Buffer.from(data, encoding);
+        } else {
+            if (typeof data === "number") {
+                // Safeguard for old Node.js versions. On newer versions,
+                // Buffer.from(number) / Buffer(number, encoding) already throw.
+                throw new Error("The \"data\" argument must not be a number");
+            }
+            return new Buffer(data, encoding);
+        }
+    },
+    /**
+     * Create a new nodejs Buffer with the specified size.
+     * @param {Integer} size the size of the buffer.
+     * @return {Buffer} a new Buffer.
+     */
+    allocBuffer: function (size) {
+        if (Buffer.alloc) {
+            return Buffer.alloc(size);
+        } else {
+            var buf = new Buffer(size);
+            buf.fill(0);
+            return buf;
+        }
+    },
+    /**
+     * Find out if an object is a Buffer.
+     * @param {Object} b the object to test.
+     * @return {Boolean} true if the object is a Buffer, false otherwise.
+     */
+    isBuffer : function(b){
+        return Buffer.isBuffer(b);
+    },
+
+    isStream : function (obj) {
+        return obj &&
+            typeof obj.on === "function" &&
+            typeof obj.pause === "function" &&
+            typeof obj.resume === "function";
+    }
+};
+
+
+/***/ }),
+
 /***/ 3581:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -7572,71 +7637,6 @@ NodejsStreamOutputAdapter.prototype._read = function() {
 };
 
 module.exports = NodejsStreamOutputAdapter;
-
-
-/***/ }),
-
-/***/ 7968:
-/***/ ((module) => {
-
-"use strict";
-
-
-module.exports = {
-    /**
-     * True if this is running in Nodejs, will be undefined in a browser.
-     * In a browser, browserify won't include this file and the whole module
-     * will be resolved an empty object.
-     */
-    isNode : typeof Buffer !== "undefined",
-    /**
-     * Create a new nodejs Buffer from an existing content.
-     * @param {Object} data the data to pass to the constructor.
-     * @param {String} encoding the encoding to use.
-     * @return {Buffer} a new Buffer.
-     */
-    newBufferFrom: function(data, encoding) {
-        if (Buffer.from && Buffer.from !== Uint8Array.from) {
-            return Buffer.from(data, encoding);
-        } else {
-            if (typeof data === "number") {
-                // Safeguard for old Node.js versions. On newer versions,
-                // Buffer.from(number) / Buffer(number, encoding) already throw.
-                throw new Error("The \"data\" argument must not be a number");
-            }
-            return new Buffer(data, encoding);
-        }
-    },
-    /**
-     * Create a new nodejs Buffer with the specified size.
-     * @param {Integer} size the size of the buffer.
-     * @return {Buffer} a new Buffer.
-     */
-    allocBuffer: function (size) {
-        if (Buffer.alloc) {
-            return Buffer.alloc(size);
-        } else {
-            var buf = new Buffer(size);
-            buf.fill(0);
-            return buf;
-        }
-    },
-    /**
-     * Find out if an object is a Buffer.
-     * @param {Object} b the object to test.
-     * @return {Boolean} true if the object is a Buffer, false otherwise.
-     */
-    isBuffer : function(b){
-        return Buffer.isBuffer(b);
-    },
-
-    isStream : function (obj) {
-        return obj &&
-            typeof obj.on === "function" &&
-            typeof obj.pause === "function" &&
-            typeof obj.resume === "function";
-    }
-};
 
 
 /***/ }),
@@ -44201,54 +44201,49 @@ async function CreateBranchIfRequired(octokit, forkedRepo, newBranch) {
         });
         core.info('Branch already exists');
         // This will only run if the branch already existed, as there's a return in the catch statement
-        await FetchUpstream(octokit, forkedRepo, forkedRepo, newBranch, forkedRepo.default_branch);
+        await FetchUpstream(octokit, forkedRepo, forkedRepo.parent, newBranch, forkedRepo.parent.default_branch);
     }
     catch {
         core.info('Branch does not exists, creating it now');
         const upstream = forkedRepo.parent;
-        const sha = (await octokit.rest.git.getRef({
-            owner: upstream.owner.login,
-            repo: upstream.name,
-            ref: `heads/${upstream.default_branch}`
+        // Get the SHA of the fork default branch
+        const forkSha = (await octokit.rest.git.getRef({
+            owner: forkedRepo.owner.login,
+            repo: forkedRepo.name,
+            ref: `heads/${forkedRepo.default_branch}`
         })).data.object.sha;
+        core.info(`Fork SHA: ${forkSha}`);
+        core.info(`Creating branch ${newBranch}`);
+        // Create a new branch with the SHA of the upstream default branch
         await octokit.rest.git.createRef({
             owner: forkedRepo.owner.login,
             repo: forkedRepo.name,
             ref: `refs/heads/${newBranch}`,
-            sha
+            sha: forkSha
         });
+        core.info(`Branch ${newBranch} created`);
+        await FetchUpstream(octokit, forkedRepo, upstream, newBranch, upstream.default_branch);
+        core.info(`Branch ${newBranch} updated`);
     }
 }
 async function FetchUpstream(octokit, repo, upstreamRepo, branch, upstreamBranch) {
-    core.info(`Checking if ${repo.owner.login}:${branch} is behind ${upstreamRepo.owner.login}:${upstreamBranch}`);
-    const compareResults = (await octokit.rest.repos.compareCommits({
+    core.info(`Resetting  ${repo.owner.login}:${branch} to ${upstreamRepo.owner.login}:${upstreamBranch}`);
+    const upstreamBranchReference = (await octokit.rest.git.getRef({
         owner: upstreamRepo.owner.login,
         repo: upstreamRepo.name,
-        base: upstreamBranch,
-        head: `${repo.owner.login}:${branch}`
+        ref: `heads/${upstreamBranch}`
     })).data;
-    if (compareResults.behind_by > 0) {
-        core.info(`${repo.owner.login}:${branch} is behind by ${compareResults.behind_by} commits. Fetching Upstream...`);
-        const upstreamBranchReference = (await octokit.rest.git.getRef({
-            owner: upstreamRepo.owner.login,
-            repo: upstreamRepo.name,
-            ref: `heads/${upstreamBranch}`
-        })).data;
-        try {
-            await octokit.rest.git.updateRef({
-                owner: repo.owner.login,
-                repo: repo.name,
-                ref: `heads/${branch}`,
-                sha: upstreamBranchReference.object.sha,
-                force: true
-            });
-        }
-        catch (error) {
-            throw new Error(`Failed to fetch upstream. This can be fixed by performing a manual merge\nError: ${error}`);
-        }
+    try {
+        await octokit.rest.git.updateRef({
+            owner: repo.owner.login,
+            repo: repo.name,
+            ref: `heads/${branch}`,
+            sha: upstreamBranchReference.object.sha,
+            force: true
+        });
     }
-    else {
-        core.info(`${repo.owner.login}:${branch} is up-to-date`);
+    catch (error) {
+        throw new Error(`Failed to fetch upstream. This can be fixed by performing a manual merge\nError: ${error}`);
     }
 }
 
@@ -44423,12 +44418,39 @@ async function run() {
             }
             return undefined;
         }
+        const commitTitle = `${modJson.name} ${modJson.version?.trim() && `v${modJson.version.trim()}`}`;
+        const commitBody = [
+            ...[
+                ['ID', modJson.id?.trim()],
+                ['Author', modJson.author?.trim()],
+                ['Mod Loader', modJson.modloader?.trim()],
+                ['Game Version', (modJson.packageVersion ?? 'global').trim()]
+            ]
+                .filter(([_, value]) => value)
+                .map(([key, value]) => `${key}: ${value}  `),
+            modJson.description?.trim()
+                ? `\n${'-'.repeat(50)}\n\n${modJson.description
+                    .split('\n')
+                    .map(line => line.trimEnd() + '  ')
+                    .join('\n')}`
+                : ''
+        ]
+            .join('\n')
+            .trim();
+        const commitMessage = [
+            // Make our commit message
+            commitTitle,
+            '',
+            commitBody
+        ]
+            .join('\n')
+            .trim();
         await octokit.rest.repos.createOrUpdateFileContents({
             owner: forkedModRepo.owner.login,
             repo: forkedModRepo.name,
             path: filePath,
-            message: `Added ${modJson.name} v${modJson.version} to the Mod Repo`,
-            content: base64Encode(JSON.stringify(modManifest, null, 2)),
+            message: commitMessage,
+            content: base64Encode(`${JSON.stringify(modManifest, null, 2)}\n`),
             branch: `refs/heads/${newBranch}`,
             sha: await getFileSha(filePath)
         });
@@ -44471,8 +44493,8 @@ async function run() {
                 owner: modRepo.owner.login,
                 repo: modRepo.name,
                 base: modRepo.default_branch,
-                title: `${modJson.id} ${modJson.version} - ${modJson.packageId} ${modJson.packageVersion}`,
-                body: 'Automatically generated pull request',
+                title: commitTitle,
+                body: commitBody,
                 head: forkedHead,
                 maintainer_can_modify: true
             });
