@@ -82,6 +82,7 @@ export async function CreateBranchIfRequired(
   newBranch: string
 ): Promise<void> {
   core.info(`Checking if "${newBranch}" branch exists`)
+
   try {
     await octokit.rest.git.getRef({
       owner: forkedRepo.owner.login,
@@ -95,29 +96,46 @@ export async function CreateBranchIfRequired(
     await FetchUpstream(
       octokit,
       forkedRepo,
-      forkedRepo,
+      forkedRepo.parent as GithubRepoLite,
       newBranch,
-      forkedRepo.default_branch
+      forkedRepo.parent!.default_branch
     )
   } catch {
     core.info('Branch does not exists, creating it now')
 
     const upstream = forkedRepo.parent!
 
-    const sha = (
+    // Get the SHA of the fork default branch
+    const forkSha = (
       await octokit.rest.git.getRef({
-        owner: upstream.owner.login,
-        repo: upstream.name,
-        ref: `heads/${upstream.default_branch}`
+        owner: forkedRepo.owner.login,
+        repo: forkedRepo.name,
+        ref: `heads/${forkedRepo.default_branch}`
       })
     ).data.object.sha
 
+    core.info(`Fork SHA: ${forkSha}`)
+    core.info(`Creating branch ${newBranch}`)
+
+    // Create a new branch with the SHA of the upstream default branch
     await octokit.rest.git.createRef({
       owner: forkedRepo.owner.login,
       repo: forkedRepo.name,
       ref: `refs/heads/${newBranch}`,
-      sha
+      sha: forkSha
     })
+
+    core.info(`Branch ${newBranch} created`)
+
+    await FetchUpstream(
+      octokit,
+      forkedRepo,
+      upstream as GithubRepoLite,
+      newBranch,
+      upstream.default_branch
+    )
+
+    core.info(`Branch ${newBranch} updated`)
   }
 }
 
@@ -129,7 +147,7 @@ export async function FetchUpstream(
   upstreamBranch: string
 ): Promise<void> {
   core.info(
-    `Checking if ${repo.owner.login}:${branch} is behind ${upstreamRepo.owner.login}:${upstreamBranch}`
+    `Resetting  ${repo.owner.login}:${branch} to ${upstreamRepo.owner.login}:${upstreamBranch}`
   )
 
   const upstreamBranchReference = (

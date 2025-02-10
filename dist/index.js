@@ -44201,26 +44201,33 @@ async function CreateBranchIfRequired(octokit, forkedRepo, newBranch) {
         });
         core.info('Branch already exists');
         // This will only run if the branch already existed, as there's a return in the catch statement
-        await FetchUpstream(octokit, forkedRepo, forkedRepo, newBranch, forkedRepo.default_branch);
+        await FetchUpstream(octokit, forkedRepo, forkedRepo.parent, newBranch, forkedRepo.parent.default_branch);
     }
     catch {
         core.info('Branch does not exists, creating it now');
         const upstream = forkedRepo.parent;
-        const sha = (await octokit.rest.git.getRef({
-            owner: upstream.owner.login,
-            repo: upstream.name,
-            ref: `heads/${upstream.default_branch}`
+        // Get the SHA of the fork default branch
+        const forkSha = (await octokit.rest.git.getRef({
+            owner: forkedRepo.owner.login,
+            repo: forkedRepo.name,
+            ref: `heads/${forkedRepo.default_branch}`
         })).data.object.sha;
+        core.info(`Fork SHA: ${forkSha}`);
+        core.info(`Creating branch ${newBranch}`);
+        // Create a new branch with the SHA of the upstream default branch
         await octokit.rest.git.createRef({
             owner: forkedRepo.owner.login,
             repo: forkedRepo.name,
             ref: `refs/heads/${newBranch}`,
-            sha
+            sha: forkSha
         });
+        core.info(`Branch ${newBranch} created`);
+        await FetchUpstream(octokit, forkedRepo, upstream, newBranch, upstream.default_branch);
+        core.info(`Branch ${newBranch} updated`);
     }
 }
 async function FetchUpstream(octokit, repo, upstreamRepo, branch, upstreamBranch) {
-    core.info(`Checking if ${repo.owner.login}:${branch} is behind ${upstreamRepo.owner.login}:${upstreamBranch}`);
+    core.info(`Resetting  ${repo.owner.login}:${branch} to ${upstreamRepo.owner.login}:${upstreamBranch}`);
     const upstreamBranchReference = (await octokit.rest.git.getRef({
         owner: upstreamRepo.owner.login,
         repo: upstreamRepo.name,
@@ -44443,7 +44450,7 @@ async function run() {
             repo: forkedModRepo.name,
             path: filePath,
             message: commitMessage,
-            content: base64Encode(JSON.stringify(modManifest, null, 2)),
+            content: base64Encode(`${JSON.stringify(modManifest, null, 2)}\n`),
             branch: `refs/heads/${newBranch}`,
             sha: await getFileSha(filePath)
         });
