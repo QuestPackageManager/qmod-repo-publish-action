@@ -44325,6 +44325,12 @@ async function ConstructModEntry(modJson, downloadUrl) {
         download: downloadUrl,
         source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
         cover: null,
+        dependencies: (modJson.dependencies ?? [])
+            .map(dep => ({
+            id: dep.id,
+            version: dep.version
+        }))
+            .sort((a, b) => a.id.localeCompare(b.id)),
         funding: [],
         website: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`
     };

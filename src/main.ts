@@ -4,6 +4,12 @@ import JSZip from 'jszip'
 import { CreateBranchIfRequired, getFork, GithubRepoLite } from './github'
 import path from 'path'
 
+export interface ModJSONDependency {
+  version: string
+  id: string
+  downloadIfMissing: string
+}
+
 export interface ModJSON {
   name: string
   id: string
@@ -16,8 +22,17 @@ export interface ModJSON {
   porter: string
 
   coverImage?: string
+  dependencies?: ModJSONDependency[]
   packageId?: string
   packageVersion?: string
+}
+
+export interface ModDependency {
+  /** The ID of the dependency. */
+  id: string
+
+  /** The version of the dependency. */
+  version: string
 }
 
 export interface ModEntry {
@@ -44,6 +59,9 @@ export interface ModEntry {
 
   /** A direct link to the .qmod file. */
   download: string | null
+
+  /** A list of dependencies for the mod. */
+  dependencies: ModDependency[]
 
   /** A link to the source code for the mod. */
   source: string | null
@@ -106,6 +124,12 @@ export async function ConstructModEntry(
     download: downloadUrl,
     source: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`,
     cover: null,
+    dependencies: (modJson.dependencies ?? [])
+      .map(dep => ({
+        id: dep.id,
+        version: dep.version
+      }))
+      .sort((a, b) => a.id.localeCompare(b.id)),
     funding: [],
     website: `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/`
   }
